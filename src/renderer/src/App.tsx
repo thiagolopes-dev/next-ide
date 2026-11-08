@@ -37,12 +37,13 @@ export function App() {
   return (
     <div
       className="app-surface grid h-full text-neutral-200"
-      style={{ gridTemplateColumns: collapsed ? '0px 0px 1fr' : `${width}px auto 1fr` }}
+      // A `hidden` aside is display:none and leaves the grid, so collapsed is a single column for <main>.
+      style={{ gridTemplateColumns: collapsed ? '1fr' : `${width}px auto 1fr` }}
     >
       <aside className="overflow-hidden" data-testid="sidebar" hidden={collapsed} aria-hidden={collapsed}>
         <Sidebar />
       </aside>
-      {collapsed ? <div /> : <SidebarResizer width={width} onResize={setWidth} onCommit={commit} />}
+      {!collapsed && <SidebarResizer width={width} onResize={setWidth} onCommit={commit} />}
       <main className="flex min-w-0 flex-col">
         {/* With the sidebar gone the traffic lights and the toggle sit over the dock: give them a title strip. */}
         {collapsed && <div className="h-9 shrink-0 [-webkit-app-region:drag]" data-testid="collapsed-titlebar" />}
