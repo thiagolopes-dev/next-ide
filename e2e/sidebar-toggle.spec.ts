@@ -12,6 +12,10 @@ test('botão e ⌘B recolhem e reabrem a sidebar, estado sobrevive ao reabrir', 
   await expect(sidebar).toBeHidden()
   await expect(page.getByTestId('sidebar-resizer')).toHaveCount(0)
   await expect(toggle).toHaveAttribute('aria-expanded', 'false')
+  // The dock must take the whole window, not get squeezed into a zero-width grid column.
+  const mainWidth = await page.locator('main').evaluate((el) => el.getBoundingClientRect().width)
+  const windowWidth = await page.evaluate(() => window.innerWidth)
+  expect(mainWidth).toBeGreaterThan(windowWidth - 2)
 
   await page.keyboard.press('Meta+b')
   await expect(sidebar).toBeVisible()
