@@ -36,7 +36,7 @@ export function App() {
 
   return (
     <div
-      className="app-surface grid h-full text-neutral-200"
+      className="app-surface grid h-full text-neutral-300"
       // A `hidden` aside is display:none and leaves the grid, so collapsed is a single column for <main>.
       style={{ gridTemplateColumns: collapsed ? '1fr' : `${width}px auto 1fr` }}
     >

@@ -54,14 +54,14 @@ const components: Components = {
       {children}
     </a>
   ),
-  strong: ({ children }) => <strong className="font-semibold text-neutral-50">{children}</strong>,
-  em: ({ children }) => <em className="text-neutral-200 italic">{children}</em>,
+  strong: ({ children }) => <strong className="font-semibold text-neutral-200">{children}</strong>,
+  em: ({ children }) => <em className="text-neutral-300 italic">{children}</em>,
   ul: ({ children }) => <ul className="my-2 list-disc pl-5 marker:text-neutral-500">{children}</ul>,
   ol: ({ children }) => <ol className="my-2 list-decimal pl-5 marker:text-neutral-500">{children}</ol>,
   h1: ({ children }) => <h1 className={`mt-3 mb-2 text-lg font-semibold ${ORANGE}`}>{children}</h1>,
   h2: ({ children }) => <h2 className={`mt-3 mb-2 text-base font-semibold ${ORANGE}`}>{children}</h2>,
   h3: ({ children }) => <h3 className={`mt-3 mb-1 font-semibold ${ORANGE}`}>{children}</h3>,
-  h4: ({ children }) => <h4 className="mt-2 mb-1 font-semibold text-neutral-100">{children}</h4>,
+  h4: ({ children }) => <h4 className="mt-2 mb-1 font-semibold text-neutral-200">{children}</h4>,
   blockquote: ({ children }) => <blockquote className="my-2 border-l-2 border-[#d97757]/60 pl-3 text-neutral-400 italic">{children}</blockquote>,
   hr: () => <hr className="my-3 border-neutral-800" />,
   // Fenced blocks: the child is the <code> element with `language-xx`; highlight it with shiki.
@@ -82,13 +82,13 @@ const components: Components = {
       <table className="border-collapse text-xs">{children}</table>
     </div>
   ),
-  th: ({ children }) => <th className="border border-neutral-700 px-2 py-1 text-left text-neutral-100">{children}</th>,
+  th: ({ children }) => <th className="border border-neutral-700 px-2 py-1 text-left text-neutral-200">{children}</th>,
   td: ({ children }) => <td className="border border-neutral-800 px-2 py-1">{children}</td>,
 }
 
 export const TextBlock = memo(function TextBlock({ text, streaming }: { text: string; streaming: boolean }) {
   return (
-    <div className="text-sm text-neutral-300" data-testid="assistant-text">
+    <div className="text-sm text-[#b8b8b8]" data-testid="assistant-text">
       <Markdown remarkPlugins={[remarkGfm]} components={components} urlTransform={markdownUrlTransform}>
         {text}
       </Markdown>

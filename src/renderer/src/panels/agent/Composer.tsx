@@ -344,7 +344,7 @@ export function Composer({ panelId, chat, projectPath, onSend, onLocalCommand, o
         placeholder={dictating ? 'Ouvindo… (clique 🎤 para parar)' : 'Pergunte ao Claude… (Enter envia, Shift+Enter quebra linha)'}
         readOnly={dictating}
         rows={1}
-        className="w-full resize-none rounded bg-neutral-900 px-3 py-2 text-sm text-neutral-100 outline-none ring-1 ring-neutral-800 focus:ring-neutral-600"
+        className="w-full resize-none rounded bg-neutral-900 px-3 py-2 text-sm text-neutral-200 outline-none ring-1 ring-neutral-800 focus:ring-neutral-600"
         value={text}
         onChange={(e) => {
           setText(e.target.value)
