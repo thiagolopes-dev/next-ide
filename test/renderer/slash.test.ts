@@ -16,11 +16,11 @@ describe('mergeCommands / filterCommands', () => {
     expect(merged.slice(0, LOCAL_COMMANDS.length).every((c) => c.local)).toBe(true)
     expect(merged.filter((c) => c.name === 'clear')).toHaveLength(1)
     expect(merged.map((c) => c.name)).toEqual([
-      'resume', 'clear', 'model', 'statusline', 'btw', 'rewind', 'context', 'effort', 'mode', 'rename', 'fork', 'mcp', 'agents', 'add-dir', 'compact', 'review',
+      'resume', 'clear', 'model', 'statusline', 'btw', 'rewind', 'context', 'effort', 'mode', 'rename', 'fork', 'mcp', 'agents', 'add-dir', 'remote-control', 'compact', 'review',
     ])
   })
   it('ranks prefix matches first and caps at 50', () => {
-    expect(filterCommands(merged, 're').map((c) => c.name)).toEqual(['resume', 'rewind', 'rename', 'review'])
+    expect(filterCommands(merged, 're').map((c) => c.name)).toEqual(['resume', 'rewind', 'rename', 'remote-control', 'review'])
     // Build 60 items to verify cap at 50
     const manyItems = mergeCommands(
       Array.from({ length: 60 }, (_, i) => ({ name: `cmd${i}`, description: '', argumentHint: '' })),
@@ -53,6 +53,9 @@ describe('classifySlash', () => {
     expect(classifySlash('/mcp')).toEqual({ kind: 'local', name: 'mcp', arg: '' })
     expect(classifySlash('/agents')).toEqual({ kind: 'local', name: 'agents', arg: '' })
     expect(classifySlash('/add-dir /tmp/x')).toEqual({ kind: 'local', name: 'add-dir', arg: '/tmp/x' })
+    expect(classifySlash('/remote-control')).toEqual({ kind: 'local', name: 'remote-control', arg: '' })
+    expect(classifySlash('/rc off')).toEqual({ kind: 'local', name: 'remote-control', arg: 'off' })
+    expect(classifySlash('/constructor')).toEqual({ kind: 'send' })
   })
   it('routes /btw with its (multi-line) question, even an empty one', () => {
     expect(classifySlash('/btw qual arquivo você está editando?')).toEqual({ kind: 'btw', question: 'qual arquivo você está editando?' })

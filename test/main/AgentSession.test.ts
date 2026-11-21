@@ -778,4 +778,47 @@ describe('AgentSession', () => {
       await expect(s.mcpServers()).resolves.toEqual({ ok: false, message: 'Sessão encerrada.' })
     })
   })
+  describe('remote control', () => {
+    it('enables via the CLI, reports the session URL and follows bridge_state', async () => {
+      const f = fake()
+      const enable = vi.fn(async (enabled: boolean) => (enabled ? { session_url: 'https://claude.ai/code/session_1', bridge_session_id: 'cse_1' } : undefined))
+      f.q.enableRemoteControl = enable
+      const { s, events } = session(f.fn)
+      await expect(s.setRemoteControl(true, 'proj · claude')).resolves.toEqual({ ok: true, value: 'https://claude.ai/code/session_1' })
+      expect(enable).toHaveBeenCalledWith(true, 'proj · claude')
+      expect(events.filter((e) => e.kind === 'remote')).toEqual([
+        { kind: 'remote', remote: { status: 'connecting' } },
+        { kind: 'remote', remote: { status: 'connected', url: 'https://claude.ai/code/session_1' } },
+      ])
+      f.out.push({ type: 'system', subtype: 'bridge_state', state: 'failed', detail: 'token expirado' })
+      await tick()
+      expect(events.at(-1)).toEqual({ kind: 'remote', remote: { status: 'failed', url: 'https://claude.ai/code/session_1', detail: 'token expirado' } })
+      await expect(s.setRemoteControl(false)).resolves.toEqual({ ok: true, value: null })
+      expect(enable).toHaveBeenLastCalledWith(false, undefined)
+      expect(events.at(-1)).toEqual({ kind: 'remote', remote: null })
+    })
+
+    it('reports unsupported CLIs and errors, rolling the state back', async () => {
+      const f = fake()
+      const { s, events } = session(f.fn)
+      await expect(s.setRemoteControl(true)).resolves.toMatchObject({ ok: false, message: expect.stringContaining('não é suportado') })
+      f.q.enableRemoteControl = async () => {
+        throw new Error('Remote Control requires a claude.ai login')
+      }
+      await expect(s.setRemoteControl(true)).resolves.toEqual({ ok: false, message: 'Remote Control requires a claude.ai login' })
+      expect(events.at(-1)).toEqual({ kind: 'remote', remote: null })
+    })
+
+    it('turns off when the query ends or the session closes', async () => {
+      const f = fake()
+      f.q.enableRemoteControl = async () => ({ session_url: 'https://claude.ai/code/session_2' })
+      const { s, events } = session(f.fn)
+      await s.setRemoteControl(true)
+      f.out.end()
+      await tick()
+      expect(events.filter((e) => e.kind === 'remote').at(-1)).toEqual({ kind: 'remote', remote: null })
+      s.close()
+      expect(events.filter((e) => e.kind === 'remote')).toHaveLength(3)
+    })
+  })
 })

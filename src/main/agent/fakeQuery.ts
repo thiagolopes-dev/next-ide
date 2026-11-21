@@ -187,6 +187,11 @@ export const fakeQuery: QueryFn = ({ prompt, options }) => {
       if (s.status === 'needs-auth') throw new Error('Faça login com claude /mcp')
       mcp.set(name, { ...s, status: 'connected' })
     },
+    enableRemoteControl: async (enabled: boolean) => {
+      if (!enabled) return undefined
+      out.push({ type: 'system', subtype: 'bridge_state', state: 'connected', session_id: 'fake', uuid: 'bridge_1' })
+      return { session_url: 'https://claude.ai/code/session_fake', connect_url: 'https://claude.ai/code', bridge_session_id: 'cse_fake' }
+    },
     supportedAgents: async () => [
       { name: 'Explore', description: 'Busca no código' },
       { name: 'general-purpose', description: 'Tarefas gerais' },

@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto'
-import type { AgentEvent, AgentInfo, CommandOption, ContextUsage, ImageAttachment, McpServer, ModelOption, Outcome, PermissionDecision, RewindFiles, SessionUsage, SideAnswer } from '@shared/agent'
+import type { AgentEvent, AgentInfo, CommandOption, ContextUsage, ImageAttachment, McpServer, ModelOption, Outcome, PermissionDecision, RemoteControl, RewindFiles, SessionUsage, SideAnswer } from '@shared/agent'
 import type { EffortLevel, PermissionMode, SessionState } from '@shared/models'
 import { AsyncQueue } from './AsyncQueue'
 import { parseContextUsage, parseSessionUsage, StreamNormalizer } from './normalize'
@@ -61,6 +61,11 @@ export type QueryLike = AsyncIterable<unknown> & {
   reconnectMcpServer?(name: string): Promise<void>
   /** The CLI's /agents list: undocumented in the SDK typings, and absent on older SDKs/binaries. */
   supportedAgents?(): Promise<unknown[]>
+  /**
+   * The CLI's /remote-control: undocumented in the SDK typings, and absent on older SDKs/binaries.
+   * Enabling resolves `{ session_url, connect_url, bridge_session_id, … }`; the CLI hosts the bridge.
+   */
+  enableRemoteControl?(enabled: boolean, name?: string): Promise<unknown>
   close(): void
 }
 export type QueryFn = (params: { prompt: AsyncIterable<UserMessageLike>; options: QueryOptions }) => QueryLike
@@ -101,6 +106,18 @@ export const unsupported = (feature: string): { ok: false; message: string } => 
 })
 const failure = (err: unknown): { ok: false; message: string } => ({ ok: false, message: err instanceof Error ? err.message : String(err) })
 const sameDirs = (a: string[], b: string[]): boolean => a.length === b.length && a.every((d, i) => d === b[i])
+
+/** `system:bridge_state` (the CLI's Remote Control bridge) → the panel's view of it. */
+function bridgeState(m: unknown, current: RemoteControl | null): RemoteControl | null | undefined {
+  if (!isRec(m) || m.type !== 'system' || m.subtype !== 'bridge_state' || typeof m.state !== 'string') return undefined
+  const detail = typeof m.detail === 'string' && m.detail ? m.detail : undefined
+  const url = current?.url ? { url: current.url } : {}
+  if (m.state === 'connected') return { status: 'connected', ...url }
+  if (m.state === 'policy_disabled') return { status: 'failed', ...url, detail: detail ?? 'Remote Control desativado pela organização.' }
+  if (m.state === 'failed') return { status: 'failed', ...url, ...(detail ? { detail } : {}) }
+  if (m.state === 'idle' || m.state === 'disconnected') return current ? { ...current, status: 'connecting' } : null
+  return { status: 'connecting', ...url, ...(detail ? { detail } : {}) }
+}
 
 const MCP_STATUSES = new Set(['connected', 'failed', 'needs-auth', 'pending', 'disabled'])
 
@@ -152,6 +169,8 @@ export class AgentSession {
   private pendingDelta: TextDelta | null = null
   private deltaTimer: ReturnType<typeof setTimeout> | null = null
   private sideAbort: AbortController | null = null
+  private remote: RemoteControl | null = null
+  private remoteBusy = false
 
   constructor(
     private readonly config: SessionConfig,
@@ -278,6 +297,7 @@ export class AgentSession {
       this.turnsInFlight = 0
       this.runningTasks.clear()
       query.close()
+      this.setRemote(null)
     }
     this.emit({ kind: 'dirs', dirs: this.dirs })
     return { ok: true, value: null }
@@ -430,6 +450,45 @@ export class AgentSession {
   }
 
   /**
+   * /remote-control: the CLI connects this session to claude.ai/code (and the mobile app) and
+   * hosts the bridge itself; remote prompts then run in this same query. Resolves the session URL
+   * when enabling, null when disabling. Ends with the query (close, crash, /add-dir restart).
+   */
+  async setRemoteControl(enabled: boolean, name?: string): Promise<Outcome<string | null>> {
+    if (this.closed) return { ok: false, message: 'Sessão encerrada.' }
+    if (this.remoteBusy) return { ok: false, message: 'Remote Control ainda está mudando; aguarde.' }
+    if (!enabled && !this.query) {
+      this.setRemote(null)
+      return { ok: true, value: null }
+    }
+    this.start()
+    const query = this.query
+    if (!query?.enableRemoteControl) return unsupported('Remote Control')
+    this.remoteBusy = true
+    const previous = this.remote
+    if (enabled) this.setRemote({ status: 'connecting' })
+    try {
+      const res = await query.enableRemoteControl(enabled, name)
+      if (this.closed || this.query !== query) return { ok: false, message: 'Sessão reiniciada.' }
+      if (!enabled) {
+        this.setRemote(null)
+        return { ok: true, value: null }
+      }
+      const url = isRec(res) && typeof res.session_url === 'string' ? res.session_url : undefined
+      // A bridge_state may already have arrived while the request was in flight: keep its status.
+      const failed = this.remote?.status === 'failed'
+      const detail = failed ? this.remote?.detail : undefined
+      this.setRemote({ status: failed ? 'failed' : 'connected', ...(url ? { url } : {}), ...(detail ? { detail } : {}) })
+      return { ok: true, value: url ?? null }
+    } catch (err) {
+      if (!this.closed && this.query === query) this.setRemote(enabled ? null : previous)
+      return failure(err)
+    } finally {
+      this.remoteBusy = false
+    }
+  }
+
+  /**
    * /btw: a quick tool-less answer from the session's context, even mid-turn. It never enters
    * the conversation history. A newer question cancels the one still in flight.
    */
@@ -484,6 +543,7 @@ export class AgentSession {
     this.query?.close()
     this.abort?.abort()
     this.runningTasks.clear()
+    this.setRemote(null)
     this.setState('exited')
   }
 
@@ -536,6 +596,8 @@ export class AgentSession {
           this.turnsInFlight = Math.max(this.turnsInFlight, 1)
           this.setState('running')
         }
+        const remote = bridgeState(message, this.remote)
+        if (remote !== undefined) this.setRemote(remote)
         for (const event of this.normalizer.push(message)) {
           if (event.kind === 'init') this.sessionId = event.sessionId
           if (event.kind === 'task-started') this.runningTasks.set(event.id, { background: event.background, ambient: event.ambient === true })
@@ -580,7 +642,14 @@ export class AgentSession {
     this.abort = null
     this.turnsInFlight = 0
     this.runningTasks.clear()
+    this.setRemote(null)
     this.setState(state)
+  }
+
+  private setRemote(remote: RemoteControl | null): void {
+    if (remote === null && this.remote === null) return
+    this.remote = remote
+    this.emit({ kind: 'remote', remote })
   }
 
   /**

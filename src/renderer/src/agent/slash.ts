@@ -3,7 +3,7 @@ import { EFFORT_LEVELS } from '@shared/models'
 import { MODE_OPTIONS } from './permissions'
 
 export type SlashItem = { name: string; description: string; argumentHint: string; local: boolean }
-export type LocalCommand = 'resume' | 'clear' | 'model' | 'statusline' | 'rewind' | 'context' | 'effort' | 'mode' | 'rename' | 'fork' | 'mcp' | 'agents' | 'add-dir'
+export type LocalCommand = 'resume' | 'clear' | 'model' | 'statusline' | 'rewind' | 'context' | 'effort' | 'mode' | 'rename' | 'fork' | 'mcp' | 'agents' | 'add-dir' | 'remote-control'
 export type SlashAction =
   | { kind: 'local'; name: LocalCommand; arg: string }
   | { kind: 'btw'; question: string }
@@ -25,9 +25,15 @@ export const LOCAL_COMMANDS: SlashItem[] = [
   { name: 'mcp', description: 'Servidores MCP: status, ligar/desligar, reconectar', argumentHint: '', local: true },
   { name: 'agents', description: 'Subagentes disponíveis', argumentHint: '', local: true },
   { name: 'add-dir', description: 'Dar acesso a outra pasta', argumentHint: '[caminho]', local: true },
+  { name: 'remote-control', description: 'Continuar esta sessão no claude.ai / app do celular (alias /rc)', argumentHint: '[off]', local: true },
 ]
 
+/** Short names the CLI also accepts for a local command. */
+const ALIASES: Record<string, LocalCommand> = { rc: 'remote-control' }
+
 const LOCAL_NAMES = new Set<string>(LOCAL_COMMANDS.map((c) => c.name))
+// The CLI's own entry (listed by supportedCommands) would pass through as a prompt: ours replaces it.
+const SHADOWED = new Set(Object.keys(ALIASES))
 const BTW = /^\/btw(?:\s+([\s\S]*))?$/
 const TUI_ONLY = new Set([
   'login', 'logout', 'config', 'usage', 'doctor', 'permissions', 'hooks',
@@ -40,7 +46,7 @@ export function slashQuery(text: string): string | null {
 }
 
 export function mergeCommands(sdk: CommandOption[], initNames: string[]): SlashItem[] {
-  const seen = new Set(LOCAL_NAMES)
+  const seen = new Set([...LOCAL_NAMES, ...SHADOWED])
   const out: SlashItem[] = [...LOCAL_COMMANDS]
   for (const c of sdk) {
     if (seen.has(c.name)) continue
@@ -70,6 +76,7 @@ export function classifySlash(text: string): SlashAction {
   const name = match[1]!
   const arg = (match[2] ?? '').trim()
   if (LOCAL_NAMES.has(name)) return { kind: 'local', name: name as LocalCommand, arg }
+  if (Object.hasOwn(ALIASES, name)) return { kind: 'local', name: ALIASES[name]!, arg }
   if (!arg && TUI_ONLY.has(name)) return { kind: 'tui', name }
   return { kind: 'send' }
 }

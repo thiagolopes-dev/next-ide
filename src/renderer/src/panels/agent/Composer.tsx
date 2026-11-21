@@ -13,6 +13,7 @@ import { useFiles } from '../../stores/filesStore'
 import { AttachIcon, HistoryIcon, MicIcon, StopIcon } from './icons'
 import { MentionMenu } from './MentionMenu'
 import { ModeIndicator } from './ModeIndicator'
+import { RemoteControlButton } from './RemoteControlButton'
 import { SlashMenu } from './SlashMenu'
 
 const IS_MAC = /Mac/.test(navigator.userAgent)
@@ -489,6 +490,7 @@ export function Composer({ panelId, chat, projectPath, onSend, onLocalCommand, o
             {dictating ? <StopIcon className="relative h-3.5 w-3.5" /> : <MicIcon className="h-4 w-4" />}
           </button>
         )}
+        <RemoteControlButton remote={chat.remote} onToggle={() => onLocalCommand('remote-control', chat.remote ? 'off' : 'on')} />
         {dictationStatus && <span data-testid="dictation-status">{dictationStatus}</span>}
         {reading > 0 && <span data-testid="image-reading-hint">carregando imagem…</span>}
         <ModeIndicator mode={chat.permissionMode} onCycle={onCycleMode} />

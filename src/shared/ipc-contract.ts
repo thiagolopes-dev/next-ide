@@ -65,6 +65,8 @@ export type InvokeMap = {
   'agent:mcpServers': { args: [panelId: string]; result: Outcome<McpServer[]> }
   'agent:toggleMcp': { args: [panelId: string, name: string, enabled: boolean]; result: Outcome<null> }
   'agent:reconnectMcp': { args: [panelId: string, name: string]; result: Outcome<null> }
+  /** Turns Remote Control on (resolves the claude.ai session URL) or off (resolves null). */
+  'agent:remoteControl': { args: [panelId: string, enabled: boolean, name?: string]; result: Outcome<string | null> }
   'agent:agents': { args: [panelId: string]; result: Outcome<AgentInfo[]> }
   'agent:listSessions': { args: [projectPath: string]; result: SessionSummary[] }
   'agent:history': { args: [projectPath: string, sessionId: string]; result: AgentEvent[] }
@@ -145,6 +147,7 @@ export const INVOKE_CHANNELS = [
   'agent:mcpServers',
   'agent:toggleMcp',
   'agent:reconnectMcp',
+  'agent:remoteControl',
   'agent:agents',
   'agent:listSessions',
   'agent:history',

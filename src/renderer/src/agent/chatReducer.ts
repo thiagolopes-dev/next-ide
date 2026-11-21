@@ -1,4 +1,4 @@
-import type { AgentEvent, ErrorAction, PermissionDecision, StatsEvent, TaskInfo } from '@shared/agent'
+import type { AgentEvent, ErrorAction, PermissionDecision, RemoteControl, StatsEvent, TaskInfo } from '@shared/agent'
 import type { EffortLevel, PermissionMode, SessionState } from '@shared/models'
 
 export type TextItem = { type: 'text'; key: string; text: string; final: boolean; parentToolUseId?: string }
@@ -41,6 +41,8 @@ export type ChatState = {
   tasks: TaskInfo[]
   /** Extra folders the agent can access, beyond the project (/add-dir). */
   dirs: string[]
+  /** Remote Control (claude.ai/code) for this session; null/absent = off. */
+  remote?: RemoteControl | null
 }
 
 export const initialChat: ChatState = { items: [], state: 'idle', slashCommands: [], totalCostUsd: 0, lastQueryCostUsd: 0, costBaseUsd: 0, tasks: [], dirs: [] }
@@ -88,6 +90,8 @@ export function reduceChat(s: ChatState, e: AgentEvent): ChatState {
       return { ...s, effort: e.effort }
     case 'dirs':
       return { ...s, dirs: e.dirs }
+    case 'remote':
+      return { ...s, remote: e.remote }
     case 'user':
       return push(s, { type: 'user', id: e.id, text: e.text, images: e.images })
     case 'text-delta': {

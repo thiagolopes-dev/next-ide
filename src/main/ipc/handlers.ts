@@ -191,6 +191,11 @@ export function buildHandlers(d: HandlerDeps): Handlers {
     },
     'agent:toggleMcp': (panelId, name, enabled) => d.agents.get(panelId).toggleMcp(name, enabled),
     'agent:reconnectMcp': (panelId, name) => d.agents.get(panelId).reconnectMcp(name),
+    'agent:remoteControl': async (panelId, enabled, name) => {
+      await d.agentReady()
+      const title = typeof name === 'string' ? name.replace(/\s+/g, ' ').trim().slice(0, 200) : ''
+      return d.agents.get(panelId).setRemoteControl(enabled === true, title || undefined)
+    },
     'agent:agents': async (panelId) => {
       await d.agentReady()
       return d.agents.get(panelId).agents()

@@ -41,6 +41,12 @@ export type RateLimits = { five_hour?: RateWindow; seven_day?: RateWindow }
 
 export type PermissionDecision = 'allow' | 'allow-always' | 'deny'
 
+/**
+ * The CLI's Remote Control bridge for this session (claude.ai/code and the mobile app can drive it).
+ * `connecting` covers the CLI's transient bridge states (ready, reconnecting…).
+ */
+export type RemoteControl = { status: 'connecting' | 'connected' | 'failed'; url?: string; detail?: string }
+
 /** Recovery the chat can offer next to an error ('new-session': start a fresh session in the panel). */
 export type ErrorAction = 'new-session'
 
@@ -61,6 +67,8 @@ export type AgentEvent =
   | { kind: 'model'; model: string }
   | { kind: 'effort'; effort: EffortLevel | null }
   | { kind: 'dirs'; dirs: string[] }
+  /** Remote Control changed; null = off. */
+  | { kind: 'remote'; remote: RemoteControl | null }
   | { kind: 'task-started'; id: string; description: string; background: boolean; toolUseId?: string; taskType?: string; subagentType?: string; ambient?: boolean }
   | { kind: 'task-progress'; id: string; description?: string; lastToolName?: string; totalTokens: number; toolUses: number; durationMs: number }
   | { kind: 'task-done'; id: string; status: TaskStatus; summary: string }

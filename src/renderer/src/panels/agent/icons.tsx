@@ -36,3 +36,14 @@ export function HistoryIcon({ className }: IconProps) {
     </svg>
   )
 }
+
+export function RemoteIcon({ className }: IconProps) {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden className={className} {...stroke}>
+      <rect x="7" y="9" width="10" height="13" rx="2" />
+      <path d="M11 18h2" />
+      <path d="M8.5 5.5a5 5 0 0 1 7 0" />
+      <path d="M6 3a8.5 8.5 0 0 1 12 0" />
+    </svg>
+  )
+}

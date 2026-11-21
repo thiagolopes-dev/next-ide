@@ -13,6 +13,12 @@ describe('reduceChat', () => {
     expect(s).toMatchObject({ state: 'running', sessionId: 's1', model: 'sonnet', permissionMode: 'plan', slashCommands: ['compact'] })
   })
 
+  it('tracks remote control on and off', () => {
+    const on = reduceAll([{ kind: 'remote', remote: { status: 'connected', url: 'https://claude.ai/code/x' } }])
+    expect(on.remote).toEqual({ status: 'connected', url: 'https://claude.ai/code/x' })
+    expect(reduceChat(on, { kind: 'remote', remote: null }).remote).toBeNull()
+  })
+
   it('accumulates text deltas and lets the final text win', () => {
     const s = reduceAll([
       { kind: 'text-delta', key: 'm:1', text: 'hel' },

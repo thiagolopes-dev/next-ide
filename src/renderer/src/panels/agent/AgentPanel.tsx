@@ -303,6 +303,7 @@ export function AgentPanel({ api, params }: IDockviewPanelProps<AgentPanelParams
     else if (name === 'mcp') setMcpOpen(true)
     else if (name === 'agents') setAgentsOpen(true)
     else if (name === 'add-dir') addDir(arg)
+    else if (name === 'remote-control') remoteControl(arg)
     else if (name === 'effort') {
       if (!arg) askArgument(name)
       else if (arg === 'auto' || isEffortLevel(arg)) changeEffort(arg === 'auto' ? null : arg)
@@ -313,6 +314,25 @@ export function AgentPanel({ api, params }: IDockviewPanelProps<AgentPanelParams
       else if (mode) changeMode(mode)
       else notify(`Modo inválido: ${arg}. Use auto, manual, accept, plan ou bypass.`)
     }
+  }
+
+  /** /remote-control [on|off]: bare = turn on, or show the link when it's already on. */
+  const remoteControl = (arg: string) => {
+    const want = arg.toLowerCase()
+    if (want && want !== 'on' && want !== 'off') return notify('Uso: /remote-control [on|off]')
+    const current = liveChat().remote
+    if (!want && current?.url) return notify(`Remote Control ativo: ${current.url}`)
+    const enabled = want !== 'off'
+    if (!enabled && !current) return notify('Remote Control já está desligado.')
+    if (enabled) notify('Conectando Remote Control…')
+    const name = panelTitle(currentAgentParams(panelId) ?? params)
+    void window.api
+      .invoke('agent:remoteControl', panelId, enabled, name)
+      .then((r) => {
+        if (!r.ok) return notify(`Remote Control: ${r.message}`)
+        notify(r.value ? `Remote Control ativo: ${r.value} — abra no claude.ai ou no app do Claude.` : 'Remote Control desligado.')
+      })
+      .catch((err) => notify(`Remote Control: ${errorText(err)}`))
   }
 
   const resume = (sessionId: string) => {
